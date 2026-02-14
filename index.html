@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kawaii Pomodoro</title>
+  <style>
+    :root{
+      --bg:#f7f2e8;
+      --ink:#4a352a;
+      --muted:#7a6357;
+      --ring:#6b5447;
+      --ringDim: rgba(107,84,71,.18);
+      --accent:#b7a44c;
+      --accentInk:#3b2a21;
+      --card:#ffffff00;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display:flex;
+      justify-content:center;
+      min-height:100vh;
+    }
+    .phone{
+      width:min(420px, 100%);
+      padding: 22px 18px 28px;
+    }
+
+    .status{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      color: var(--muted);
+      font-weight:600;
+      letter-spacing:.2px;
+      font-size:14px;
+      margin-bottom:18px;
+      opacity:.9;
+    }
+    .pill{
+      height:28px;
+      width:160px;
+      border-radius:999px;
+      background: rgba(0,0,0,.10);
+    }
+
+    .title{
+      text-align:center;
+      font-weight:800;
+      font-size:44px;
+      letter-spacing:.2px;
+      margin: 10px 0 18px;
+      color: var(--ink);
+    }
+
+    .center{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      margin: 6px 0 10px;
+    }
+
+    .ringWrap{
+      width: 280px;
+      height: 280px;
+      position:relative;
+    }
+    svg.ring{
+      position:absolute;
+      inset:0;
+      transform: rotate(-90deg);
+      z-index: 2;          /* put ring on top */
+        
+    }
+    .hero{
+      position:absolute;
+      inset: 38px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index: 1;          /* put ring on top */
+
+    }
+    .hero img{
+      width:200px;
+      height:200px;
+      object-fit:contain;
+      border-radius: 22px;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.08));
+    }
+
+    .time{
+      text-align:center;
+      font-weight:900;
+      font-size:72px;
+      letter-spacing:1px;
+      margin: 14px 0 14px;
+      color: var(--ink);
+    }
+
+    .modes{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      margin: 4px 0 14px;
+      flex-wrap:wrap;
+    }
+    .chip{
+      border:2px solid rgba(74,53,42,.20);
+      background: rgba(255,255,255,.20);
+      color: var(--ink);
+      padding:10px 14px;
+      border-radius:999px;
+      font-weight:800;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip.active{
+      border-color: rgba(74,53,42,.65);
+      background: rgba(183,164,76,.22);
+    }
+
+    .btnRow{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      margin-top: 8px;
+    }
+    button{
+      border:0;
+      cursor:pointer;
+      font-weight:900;
+      letter-spacing:.2px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      min-width: 140px;
+    }
+    .primary{
+      background: var(--accent);
+      color: var(--accentInk);
+      box-shadow: 0 10px 18px rgba(0,0,0,.10);
+    }
+    .secondary{
+      background: rgba(74,53,42,.08);
+      color: var(--ink);
+      border: 2px solid rgba(74,53,42,.16);
+    }
+
+    .hint{
+      text-align:center;
+      margin-top: 14px;
+      color: var(--muted);
+      font-weight:650;
+      font-size:13px;
+    }
+
+    .sr{ position:absolute; left:-9999px; }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="status">
+      <div id="clock">3:21</div>
+      <div class="pill" aria-hidden="true"></div>
+      <div>72%</div>
+    </div>
+
+    <div class="title" id="modeTitle">Time to Work...</div>
+
+    <div class="center">
+      <div class="ringWrap" aria-label="Progress ring">
+        <svg class="ring" viewBox="0 0 100 100">
+          <!-- background ring -->
+          <circle cx="50" cy="50" r="44"
+                  fill="none"
+                  stroke="var(--ringDim)"
+                  stroke-width="6"
+                  stroke-linecap="round"></circle>
+
+          <!-- progress ring -->
+          <circle id="progress"
+                  cx="50" cy="50" r="44"
+                  fill="none"
+                  stroke="var(--ring)"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-dasharray="276.46"
+                  stroke-dashoffset="0"></circle>
+          <!-- minute sweep ring (one lap per minute) -->
+            <circle id="minuteSweep"
+                    cx="50" cy="50" r="39"
+                    fill="none"
+                    stroke="var(--ring)"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-dasharray="245.04"
+                    stroke-dashoffset="0"
+                    opacity="0.55"></circle>        
+        </svg>
+
+        <div class="hero">
+          <!-- Put your generated animal image file next to this HTML and name it raccoon.png -->
+          <img id="heroImg" src="raccoon.png" alt="Cute raccoon sweeping" />
+        </div>
+      </div>
+    </div>
+
+    <div class="time" id="time">25:00</div>
+
+    <div class="modes" role="tablist" aria-label="Timer mode">
+      <div class="chip active" id="chipWork"   role="tab" aria-selected="true">Work</div>
+      <div class="chip"        id="chipShort"  role="tab" aria-selected="false">Break</div>
+      <div class="chip"        id="chipLong"   role="tab" aria-selected="false">Long</div>
+    </div>
+    <div class="modes" style="margin-top:8px">
+  <label class="chip" style="cursor:default">
+    Work
+    <input id="inpWork" type="number" min="1" max="180" value="25"
+           style="width:64px;margin-left:8px;border:0;background:transparent;font-weight:900;color:var(--ink);outline:none" />
+    min
+  </label>
+
+  <label class="chip" style="cursor:default">
+    Break
+    <input id="inpShort" type="number" min="1" max="60" value="5"
+           style="width:64px;margin-left:8px;border:0;background:transparent;font-weight:900;color:var(--ink);outline:none" />
+    min
+  </label>
+
+  <label class="chip" style="cursor:default">
+    Long
+    <input id="inpLong" type="number" min="1" max="120" value="15"
+           style="width:64px;margin-left:8px;border:0;background:transparent;font-weight:900;color:var(--ink);outline:none" />
+    min
+  </label>
+</div>
+    <div class="btnRow">
+      <button class="primary" id="startPause">start</button>
+      <button class="secondary" id="reset">reset</button>
+    </div>
+
+    <div class="hint" id="hint">Tip: press Work → Start.</div>
+
+    <div class="sr" aria-live="polite" id="live"></div>
+  </div>
+
+<script>
+(() => {
+  // ---------- Config ----------
+const DURATIONS = { work: 25*60, short: 5*60, long: 15*60 };
+
+  // Optional: change titles per mode
+  const TITLES = {
+    work:  "Time to Work…",
+    short: "Break Time…",
+    long:  "Long Break…"
+  };
+
+  // Optional: change image per mode (put files next to HTML)
+const IMAGE_POOL = {
+  work:  ["raccoon.png","owl.png","fox.png","panda-sleep.png","cat.png","sloth.png","corgi.png","panda.png","bunny.png"],
+  short: ["corgi.png","panda.png","bunny.png","raccoon.png","owl.png","fox.png","panda-sleep.png","cat.png","sloth.png"],
+  long:  ["panda-sleep.png","cat.png","sloth.png","corgi.png","panda.png","bunny.png","raccoon.png","owl.png","fox.png"]
+};
+
+  // ---------- State ----------
+  let mode = "work";
+  let remaining = DURATIONS[mode];
+  let running = false;
+  let tHandle = null;
+  let lastTick = null;
+
+let currentImg = "raccoon.png";
+
+function pickRandom(arr){
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function setRandomCharacter(forMode){
+  const pool = IMAGE_POOL[forMode] ?? [];
+  if (!pool.length) return;
+
+  // avoid repeating the same image if possible
+  let next = pickRandom(pool);
+  if (pool.length > 1) {
+    while (next === currentImg) next = pickRandom(pool);
+  }
+  currentImg = next;
+  elHero.src = currentImg;
+}
+  // Ring math
+const progressCircle = document.getElementById("progress");
+const minuteSweep = document.getElementById("minuteSweep");
+
+const R = 44;
+const C = 2 * Math.PI * R;
+progressCircle.style.strokeDasharray = String(C);
+
+const Rm = 39;
+const Cm = 2 * Math.PI * Rm;
+minuteSweep.style.strokeDasharray = String(Cm);
+function setMinuteSweep(){
+  // one lap per minute based on seconds within the current minute
+  const secInMin = ((remaining % 60) + 60) % 60;   // 0..59
+  const frac = secInMin / 60;                      // 0..1
+  minuteSweep.style.strokeDashoffset = String(Cm * (1 - frac));
+}
+  // UI refs
+  const elTime = document.getElementById("time");
+  const elTitle = document.getElementById("modeTitle");
+  const elStartPause = document.getElementById("startPause");
+  const elReset = document.getElementById("reset");
+  const elHero = document.getElementById("heroImg");
+  const elLive = document.getElementById("live");
+  const chips = {
+    work:  document.getElementById("chipWork"),
+    short: document.getElementById("chipShort"),
+    long:  document.getElementById("chipLong")
+  };
+
+  const inpWork  = document.getElementById("inpWork");
+const inpShort = document.getElementById("inpShort");
+const inpLong  = document.getElementById("inpLong");
+
+function clamp(n, lo, hi){
+  n = Number(n);
+  if (!Number.isFinite(n)) return lo;
+  return Math.min(hi, Math.max(lo, n));
+}
+
+function applyDurations({resetCurrent=true} = {}){
+  const w = clamp(inpWork.value, 1, 180);
+  const s = clamp(inpShort.value, 1, 60);
+  const l = clamp(inpLong.value, 1, 120);
+
+  inpWork.value = w; inpShort.value = s; inpLong.value = l;
+
+  DURATIONS.work  = w * 60;
+  DURATIONS.short = s * 60;
+  DURATIONS.long  = l * 60;
+
+  if (resetCurrent){
+    pause();
+    remaining = DURATIONS[mode];
+    render();
+    announce("Durations updated.");
+  } else {
+    // Keep current remaining time but update ring scaling
+    render();
+  }
+}
+
+// Apply when the user edits (Enter or focus-out)
+[inpWork, inpShort, inpLong].forEach(inp => {
+  inp.addEventListener("change", () => applyDurations({resetCurrent:true}));
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") applyDurations({resetCurrent:true});
+  });
+});
+
+  // ---------- Helpers ----------
+  function fmt(sec){
+    sec = Math.max(0, Math.floor(sec));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  }
+
+  function setRing(){
+    const total = DURATIONS[mode];
+    const frac = total ? (remaining / total) : 0;
+    // full ring when remaining=total, empty when remaining=0
+    progressCircle.style.strokeDashoffset = String(C * (1 - frac));
+  }
+
+  function setMode(next){
+    mode = next;
+    remaining = DURATIONS[mode];
+    running = false;
+    stop();
+    elStartPause.textContent = "start";
+    elTitle.textContent = TITLES[mode] ?? "Busy…";
+setRandomCharacter(mode);
+    for (const k of Object.keys(chips)){
+      const active = (k === mode);
+      chips[k].classList.toggle("active", active);
+      chips[k].setAttribute("aria-selected", active ? "true" : "false");
+    }
+    render();
+  }
+
+ function render(){
+  elTime.textContent = fmt(remaining);
+  setRing();
+  setMinuteSweep();
+}
+  function announce(msg){
+    elLive.textContent = msg;
+  }
+
+  function tick(){
+    const now = performance.now();
+    if (lastTick == null) lastTick = now;
+
+    const dt = (now - lastTick) / 1000;
+    lastTick = now;
+
+    remaining -= dt;
+    if (remaining <= 0){
+      remaining = 0;
+      render();
+      stop();
+      running = false;
+      elStartPause.textContent = "start";
+      announce("Timer done.");
+      // Small beep using WebAudio (no file needed)
+      setRandomCharacter(mode);
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = 880;
+        g.gain.value = 0.04;
+        o.connect(g); g.connect(ctx.destination);
+        o.start();
+        setTimeout(() => { o.stop(); ctx.close(); }, 220);
+      } catch(e){}
+      return;
+    }
+    render();
+  }
+
+  function start(){
+    if (running) return;
+    running = true;
+    elStartPause.textContent = "pause";
+    lastTick = null;
+    tHandle = setInterval(tick, 100);
+    announce("Timer started.");
+  }
+
+  function stop(){
+    if (tHandle) clearInterval(tHandle);
+    tHandle = null;
+    lastTick = null;
+  }
+
+  function pause(){
+    if (!running) return;
+    running = false;
+    elStartPause.textContent = "start";
+    stop();
+    announce("Timer paused.");
+  }
+
+  function reset(){
+    pause();
+    remaining = DURATIONS[mode];
+    setRandomCharacter(mode);
+    render();
+    announce("Timer reset.");
+  }
+
+  // ---------- Wire up ----------
+  elStartPause.addEventListener("click", () => running ? pause() : start());
+  elReset.addEventListener("click", reset);
+
+  chips.work.addEventListener("click", () => setMode("work"));
+  chips.short.addEventListener("click", () => setMode("short"));
+  chips.long.addEventListener("click", () => setMode("long"));
+
+  // Fake status clock (cosmetic)
+  function updateClock(){
+    const d = new Date();
+    const h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2,"0");
+    const hh = ((h + 11) % 12) + 1;
+    document.getElementById("clock").textContent = `${hh}:${m}`;
+  }
+  setInterval(updateClock, 2000);
+  updateClock();
+
+  // Init
+  elTitle.textContent = TITLES[mode];
+  elHero.src = IMAGES[mode];
+  render();
+  applyDurations({ resetCurrent: true });
+})();
+</script>
+</body>
+</html>
