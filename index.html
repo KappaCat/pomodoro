@@ -478,7 +478,7 @@ setRandomCharacter(mode);
 
   // Init
   elTitle.textContent = TITLES[mode];
-  elHero.src = IMAGES[mode];
+  elHero.src = setRandomCharacter(mode);
   render();
   applyDurations({ resetCurrent: true });
 })();
